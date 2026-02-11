@@ -162,16 +162,21 @@ def setup_logging(config: LoggingConfig) -> logging.Logger:
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
-    # File handler if specified
+    # File handler if specified and writable
     if config.file:
         from pathlib import Path
         log_file = Path(config.file)
-        log_file.parent.mkdir(parents=True, exist_ok=True)
-
-        file_handler = logging.FileHandler(config.file)
-        file_handler.setLevel(getattr(logging, config.level.upper()))
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
+        
+        # Only create directory if it's writable (skip /var/log on Render)
+        try:
+            log_file.parent.mkdir(parents=True, exist_ok=True)
+            file_handler = logging.FileHandler(config.file)
+            file_handler.setLevel(getattr(logging, config.level.upper()))
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
+        except PermissionError:
+            # On Render, can't write to /var/log - just use console logging
+            logger.warning(f"Cannot write to {config.file}, using console only")
 
     return logger
 
