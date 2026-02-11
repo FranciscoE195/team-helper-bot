@@ -9,8 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from rag_system.api.routes import health, query, trace, webhook
 from rag_system.config import get_logger, get_settings, setup_logging
 from rag_system.providers.database import get_database_provider
-from rag_system.providers.embedder import get_embedder_provider
-from rag_system.providers.reranker_model import get_reranker_provider
 
 logger = get_logger(__name__)
 
@@ -29,31 +27,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         db_provider = get_database_provider()
         logger.info("Database connected successfully")
 
-        # Load ML models
-        embedder = get_embedder_provider()
-        logger.info(
-            "Embedding model loaded",
-            extra={
-                "model": settings.models.embedding.model_name,
-                "dimension": embedder.dimension,
-            },
-        )
-
-        reranker = get_reranker_provider()
-        logger.info(
-            "Reranker model loaded",
-            extra={"model": settings.models.reranker.model_name},
-        )
-
-        logger.info(
-            "LLM provider configured",
-            extra={
-                "provider": settings.models.llm.provider,
-                "model": settings.models.llm.model,
-            },
-        )
-
-        logger.info("RAG System ready to accept requests")
+        # Note: ML models are loaded lazily on first request to avoid startup timeout
+        logger.info("RAG System ready to accept requests (models will load on first use)")
 
     except Exception as e:
         logger.error(f"Failed to start RAG System: {e}", exc_info=True)
