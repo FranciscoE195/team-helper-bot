@@ -22,12 +22,17 @@ echo "PYTHONPATH set to: $PYTHONPATH"
 echo ""
 
 # Verify rag_system exists
+echo "Contents of src/ directory:"
+ls -la src/
+echo ""
+
 if [ -d "src/rag_system" ]; then
     echo "✓ src/rag_system directory found"
     ls -la src/rag_system/ | head -5
 else
     echo "✗ src/rag_system directory NOT FOUND!"
-    ls -la src/
+    echo "Checking if it's nested deeper..."
+    find src -name "rag_system" -type d 2>/dev/null || echo "Not found anywhere in src/"
     exit 1
 fi
 
