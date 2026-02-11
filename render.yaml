@@ -3,8 +3,8 @@ services:
     name: bpi-rag-api
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements-render.txt && echo "Build completed. Checking start.sh..." && ls -la start.sh && chmod +x start.sh && echo "start.sh permissions updated"
-    startCommand: bash start.sh
+    buildCommand: pip install -r requirements-render.txt
+    startCommand: PYTHONPATH=/opt/render/project/src python -m uvicorn rag_system.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0
