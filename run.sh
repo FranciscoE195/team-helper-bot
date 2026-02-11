@@ -6,9 +6,14 @@ echo "Initial working directory: $(pwd)"
 echo "Python version: $(python --version)"
 echo ""
 
-# Change to project root (where run.sh is located)
-cd "$(dirname "$0")"
-echo "Changed to project root: $(pwd)"
+# Render starts in /opt/render/project/src but we need to be in /opt/render/project
+# Go up one directory if we're in the src subdirectory
+if [[ "$(pwd)" == */src ]]; then
+    cd ..
+    echo "Moved up to project root: $(pwd)"
+else
+    echo "Already in project root: $(pwd)"
+fi
 echo ""
 
 # Set PYTHONPATH to the src directory
