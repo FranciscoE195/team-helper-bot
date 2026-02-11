@@ -40,9 +40,10 @@ config/config.yaml
 # Docker
 docker-compose.override.yml
 
-# Model cache
+# Model cache - only ignore root level model files, not Python packages
 .cache/
-models/
+/models/huggingface/
+/models/ollama/
 *.bin
 *.safetensors
 
