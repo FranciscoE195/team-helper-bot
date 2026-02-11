@@ -4,10 +4,12 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements-render.txt
-    startCommand: cd src && uvicorn rag_system.main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn rag_system.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0
+      - key: PYTHONPATH
+        value: /opt/render/project/src
       - key: GROQ_API_KEY
         sync: false  # Set this in Render dashboard
       - key: DATABASE_URL
