@@ -6,19 +6,22 @@ echo "Initial working directory: $(pwd)"
 echo "Python version: $(python --version)"
 echo ""
 
-# Render starts in /opt/render/project/src
-# The rag_system code is directly here at rag_system/
-export PYTHONPATH=$(pwd)
+# We're in /opt/render/project/src (repo root)
+# The actual rag_system is in src/rag_system
+export PYTHONPATH=$(pwd)/src
 echo "PYTHONPATH set to: $PYTHONPATH"
 echo ""
 
 # Verify rag_system exists
-if [ -d "rag_system" ]; then
-    echo "✓ rag_system directory found at: $(pwd)/rag_system"
+if [ -d "src/rag_system" ]; then
+    echo "✓ rag_system directory found at: $(pwd)/src/rag_system"
 else
     echo "✗ rag_system directory NOT FOUND!"
     echo "Current directory contents:"
     ls -la
+    echo ""
+    echo "Contents of src/:"
+    ls -la src/ || echo "src/ doesn't exist"
     exit 1
 fi
 
