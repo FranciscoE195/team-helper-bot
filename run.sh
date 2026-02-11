@@ -24,12 +24,18 @@ echo ""
 # Verify rag_system exists
 if [ -d "src/src/rag_system" ]; then
     echo "✓ src/src/rag_system directory found"
-    ls -la src/src/rag_system/ | head -5
 else
     echo "✗ src/src/rag_system directory NOT FOUND!"
     find . -name "rag_system" -type d 2>/dev/null || echo "Not found anywhere"
     exit 1
 fi
+
+# Verify Python can import rag_system
+echo "Testing Python import..."
+python -c "import sys; print('Python path:', sys.path); import rag_system; print('✓ rag_system imported successfully')" || {
+    echo "✗ Failed to import rag_system"
+    exit 1
+}
 
 echo ""
 echo "Starting uvicorn..."
