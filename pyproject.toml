@@ -1,0 +1,197 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bpi-rag-system"
+version = "0.1.0"
+description = "RAG system for BPI team documentation"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "sqlalchemy>=2.0.25",
+    "psycopg2-binary>=2.9.9",
+    "pgvector>=0.2.4",
+    "sentence-transformers>=2.3.1",
+    "torch>=2.1.0",
+    "transformers>=4.36.0",
+    "httpx>=0.26.0",
+    "pyyaml>=6.0.1",
+    "python-multipart>=0.0.6",
+    "python-dotenv>=1.0.0",
+    "pillow>=10.2.0",
+    "markdown>=3.5.1",
+    "gitpython>=3.1.41",
+    "click>=8.1.7",
+    "rich>=13.7.0",
+    "codetiming>=1.4.0",
+]
+
+[dependency-groups]
+dev = [
+    "coverage[toml]>=7.10.7",
+    "pre-commit>=4.3.0",
+    "pylint>=3.3.8",
+    "pyright>=1.1.406",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=0.23.3",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
+    "pytest-timeout>=2.4.0",
+    "pytest-xdist>=3.8.0",
+    "ruff>=0.13.3",
+    "black>=23.12.1",
+    "mypy>=1.8.0",
+    "typeguard>=4.4.4",
+]
+
+[project.scripts]
+rag-query = "cli.cli:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.uv]
+index-url = "https://repo.gbpiweb.loc/artifactory/api/pypi/pypi-bpi/simple"
+
+# RUFF
+
+[tool.ruff]
+preview = true
+line-length = 150
+target-version = "py39"
+
+[tool.ruff.lint]
+preview = true
+select = [
+    "ANN",   # flake8-annotations
+    "B",     # flake8-bugbear
+    "C90",   # mccabe (complexity)
+    "D",     # pydocstyle (docstrings)
+    "DOC",   # Ruff docstring completeness
+    "E",     # pycodestyle errors
+    "F",     # pyflakes
+    "I",     # isort (import sorting)
+    "S",     # flake8-bandit (security)
+    "W",     # pycodestyle warnings
+    "UP",    # pyupgrade
+    "RUF",   # Ruff-specific rules
+    "TID",   # tidy imports
+    "ARG",   # unused arguments
+    "PTH",   # use pathlib
+    "RET",   # return consistency
+    "SIM",   # simplify code
+]
+
+ignore = [
+    # "ANN401",  # Dynamically typed expressions (typing.Any) are disallowed
+    # "D105",    # Missing docstring in magic method
+    # "D107",    # Missing docstring in __init__
+    # "E203",    # Whitespace before ':'
+    # "E501",    # Line too long (handled by line-length setting)
+    "UP045"
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+section-order = [
+    "future",
+    "standard-library", 
+    "third-party",
+    "first-party",
+    "local-folder",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/*" = ["S101"]      # Allow assert in src
+"tests/*" = ["S101"]    # Allow assert in tests
+
+# PYLINT
+
+[tool.pylint.main]
+ignore = ["migrations", "venv", ".venv", "build", "dist", "tests"]
+extension-pkg-allow-list = []
+init-hook = 'import sys; sys.path.append("src")'
+ignored-modules = []
+
+[tool.pylint."messages control"]
+disable = [
+    "W0511",  # fixme: Used when a warning note as FIXME or TODO is detected
+    # "W0107",  # unnecessary-pass: Used when a pass statement could be removed
+    # "R0902",  # too-many-instance-attributes: Too many instance attributes (default: 7)
+    # "W0718",  # broad-exception-caught: Catching too general exception (like Exception)
+    # "W0212",  # protected-access: Access to a protected member of a client class
+    # "C0302",  # too-many-lines: Too many lines in module (default: 1000)
+    # "E1101",  # no-member: Used when a variable is accessed for a nonexistent member
+    "R0903",  # too-few-public-methods: Too few public methods (default: less than 2)
+    # "R0904",  # too-many-public-methods: Too many public methods (default: 20)
+    # "R0801",  # duplicate-code: Similar lines in multiple files
+    # "W0221",  # arguments-differ: Parameters differ from overridden method
+    "W1203",  # logging-fstring-interpolation: Use lazy % formatting in logging functions
+]
+enable = []
+
+[tool.pylint.format]
+max-line-length = 125
+
+[tool.pylint.reports]
+msg-template = "{path}:{line}:{column}: {msg_id}: {msg} ({symbol})"
+output-format = "colorized"
+reports = false
+score = true
+
+# PYRIGHT
+
+[tool.pyright]
+typeCheckingMode = "strict"
+ignoreMissingImports = true
+exclude = [
+    "**/_pytest/**",
+    "**/pytest/**",
+    "**/tests/**"
+]
+reportMissingTypeStubs = false            # Avoids warnings for missing stubs
+reportUnusedImport = true                 # Warns about unused imports
+reportUnusedVariable = true               # Warns about unused variables
+reportOptionalMemberAccess = true         # Warns when accessing optional members
+reportOptionalSubscript = true            # Warns when subscripting optional values
+reportOptionalCall = true                 # Warns when calling optional values
+reportUnnecessaryTypeIgnoreComment = true # Flags unused `# type: ignore` comments
+
+# PYTEST
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit"]
+pythonpath = ["src"]
+addopts = "--cov=src"
+markers = [
+    "unit: Unit tests (fast, isolated)",
+    "integration: Integration tests (medium speed, real dependencies)",
+    "e2e: End-to-end tests (slow, full workflow)",
+    "dev: For tests being developed (recomended, isolated)",
+]
+
+# COVERAGE
+
+[tool.coverage.run]
+source = ["src"]
+branch = true  # Optional: enables branch coverage
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+skip_covered = true  # Optional: hides files with 100% coverage
+exclude_lines = [
+    "pragma: no cover",              # Explicitly marked lines
+    "if __name__ == .__main__.:",    # Script entry point
+    "raise NotImplementedError",     # Abstract methods
+]

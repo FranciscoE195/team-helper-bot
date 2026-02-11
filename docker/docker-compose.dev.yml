@@ -1,0 +1,16 @@
+services:
+  rag-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    volumes:
+      - ../src:/app/src
+      - ../cli:/app/cli
+      - ../scripts:/app/scripts
+      - ../config:/app/config
+    environment:
+      LOG_LEVEL: DEBUG
+    dns:
+      - 10.165.30.101
+      - 10.165.158.101
+    command: uvicorn rag_system.main:app --host 0.0.0.0 --port 8000 --reload

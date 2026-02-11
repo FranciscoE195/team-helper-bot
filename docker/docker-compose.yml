@@ -1,0 +1,127 @@
+services:
+  # PostgreSQL with pgvector
+  postgres:
+    image: repo.gbpiweb.loc/public-images/pgvector/pgvector:pg16
+    container_name: rag-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rag_user
+      POSTGRES_PASSWORD: rag_password
+      POSTGRES_DB: rag_db
+    ports:
+      - "5432:5432"
+    dns:
+      - 10.165.30.101
+      - 10.165.158.101
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag_user -d rag_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rag-network
+
+  # Ollama (local LLM)
+  ollama:
+    image: repo.gbpiweb.loc/public-images/ollama/ollama:latest
+    container_name: rag-ollama
+    restart: unless-stopped
+    environment:
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      http_proxy: ""
+      https_proxy: ""
+      NO_PROXY: "*"
+      no_proxy: "*"
+    ports:
+      - "11434:11434"
+    dns:
+      - 10.165.30.101
+      - 10.165.158.101
+    volumes:
+      - ../models/ollama:/root/.ollama/models
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 0"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - rag-network
+
+  # Model initialization (one-time setup)
+  # Run with: docker compose --profile init up model-init
+  model-init:
+    image: repo.gbpiweb.loc/public-images/ollama/ollama:latest
+    container_name: rag-model-init
+    profiles:
+      - init
+    dns:
+      - 10.165.30.101
+      - 10.165.158.101
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      http_proxy: ""
+      https_proxy: ""
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for Ollama to be ready..."
+        sleep 10
+        
+        echo "Pulling qwen2.5:7b model..."
+        OLLAMA_HOST=http://ollama:11434 ollama pull qwen2.5:7b
+        
+        echo "Pulling llava:7b model..."
+        OLLAMA_HOST=http://ollama:11434 ollama pull llava:7b
+        
+        echo "All Ollama models downloaded successfully!"
+        echo "Models are stored in the mounted volume: models/ollama/"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - rag-network
+
+  # RAG API
+  rag-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: rag-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://rag_user:rag_password@postgres:5432/rag_db
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_LLM_MODEL: qwen2.5:7b
+      OLLAMA_VISION_MODEL: llava:7b
+      LOG_LEVEL: INFO
+      HF_HOME: /app/cache/huggingface
+      SENTENCE_TRANSFORMERS_HOME: /app/cache/huggingface
+    ports:
+      - "8000:8000"
+    dns:
+      - 10.165.30.101
+      - 10.165.158.101
+    volumes:
+      - ../config:/app/config
+      - ../models/huggingface:/app/cache/huggingface
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    networks:
+      - rag-network
+
+volumes:
+  postgres_data:
+
+networks:
+  rag-network:
+    driver: bridge

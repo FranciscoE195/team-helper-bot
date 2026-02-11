@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data
+data/
+*.db
+*.sqlite
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+docs/
+*.md
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Config (will be mounted)
+config/
+.env
+
+# Additional ignores for Docker
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+*.egg
+*.egg-info
+dist
+build
+.vscode
+.idea
+!README.md
+tests/
+.pytest_cache/
+models/
+.cache/
+tmp/
+temp/
+logs/

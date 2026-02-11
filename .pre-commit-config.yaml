@@ -1,0 +1,38 @@
+repos:
+  - repo: local
+    hooks:
+        - id: ruff_format
+          name: ruff_format
+          entry: uv run ruff format src tests
+          language: system
+          types: [python]
+          always_run: true
+
+        - id: ruff_check
+          name: ruff_check
+          entry: uv run ruff check src tests
+          language: system
+          types: [python]
+          always_run: true
+
+        - id: pylint
+          name: pylint
+          entry: uv run pylint src tests
+          language: system
+          types: [python]
+          always_run: true
+
+        - id: pyright
+          name: pyright
+          entry: uv run pyright src tests
+          language: system
+          types: [python]
+          always_run: true
+
+        - id: pytest
+          name: pytest
+          entry: uv run pytest
+          language: system
+          types: [python]
+          pass_filenames: false
+          always_run: true
