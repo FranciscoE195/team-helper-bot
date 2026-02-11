@@ -1,0 +1,13 @@
+# Ignore downloaded model files (too large for git)
+# Download using scripts/download_models.py
+
+# HuggingFace models
+huggingface/all-MiniLM-L12-v2/
+huggingface/ms-marco-MiniLM-L-12-v2/
+
+# Ollama models
+ollama/manifests/
+ollama/blobs/
+
+# Keep README
+!README.md
