@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from rag_system.api.dependencies import get_query_service
 from rag_system.config import get_logger
 from rag_system.exceptions import InsufficientEvidenceError, QueryError
-from rag_system.models.api import QueryRequest, QueryResponse
+from rag_system.models.api import QueryRequest, QueryResponse, EvidenceItem
 from rag_system.services.query_service import QueryService
 
 router = APIRouter()
@@ -57,8 +57,23 @@ async def query(
         )
 
     except QueryError as e:
-        logger.error(f"Query error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Query failed: {e}")
+        logger.warning(f"Query error: {e}")
+        # Return a 200 response with a structured answer for out-of-scope or insufficient evidence
+        import datetime
+        return QueryResponse(
+            trace_id="",
+            query=request.question,
+            answer=str(e),
+            evidence=[],
+            confidence="insufficient",
+            timestamp=datetime.datetime.utcnow(),
+            generation_time_ms=0,
+            models_used={
+                "embedding": service.settings.models.embedding.model,
+                "reranker": service.settings.models.reranker.model,
+                "llm": service.settings.models.llm.model,
+            },
+        )
 
     except Exception as e:
         logger.error(f"Unexpected error in query: {e}", exc_info=True)

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BPI Team Helper</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <style>
         * {
             margin: 0;
@@ -459,6 +460,8 @@
             border-radius: 3px;
             font-family: 'Consolas', 'Monaco', monospace;
             font-size: 0.9em;
+            word-break: break-word;
+            white-space: pre-wrap;
         }
 
         .answer-content pre {
@@ -467,11 +470,14 @@
             border-radius: 6px;
             overflow-x: auto;
             margin: 12px 0;
+            border: 1px solid var(--border-color);
         }
 
         .answer-content pre code {
             background: none;
             padding: 0;
+            white-space: pre;
+            word-break: normal;
         }
 
         .answer-content strong {
@@ -886,7 +892,7 @@
                         <div class="welcome-screen" id="welcome-screen">
                             <img class="welcome-icon" src="https://cdn-icons-png.flaticon.com/512/2938/2938421.png" alt="BPI Team Helper">
                             <div class="welcome-title">BPI Team Helper</div>
-                            <div class="welcome-subtitle">Sistema RAG para Documentação da Equipa</div>
+                            <div class="welcome-subtitle">Sistema RAG para Documentação Interna</div>
                         </div>
 
                         <div id="messages-area"></div>
@@ -899,9 +905,10 @@
 
                     <div class="evidence-sidebar empty" id="evidence-sidebar">
                         <div class="evidence-sidebar-title">
-                            <svg width="20" height="20" viewBox="0 0 512 512" fill="currentColor">
-                                <path d="M256,0C114.615,0,0,114.615,0,256s114.615,256,256,256s256-114.615,256-256S397.385,0,256,0z M389.594,371.969 c-0.781,4.688-5,8.031-9.688,7.25c-31.75-5.281-92.625-8.5-123.906-8.5s-92.156,3.219-123.906,8.5 c-0.469,0.063-0.938,0.094-1.406,0.094c-4.156,0-7.813-3-8.531-7.344c-0.781-4.688,2.375-9.063,7.063-9.844 c32.813-5.469,94.406-8.813,126.781-8.813s93.969,3.344,126.781,8.813C387.469,362.906,390.375,367.281,389.594,371.969z M391.813,318.313c-0.906,5.469-5.844,9.344-11.25,8.438c-36.875-6.156-106.563-9.813-124.563-9.813s-87.688,3.656-124.563,9.813 c-0.563,0.094-1.094,0.125-1.656,0.125c-4.844,0-9.125-3.5-10-8.563c-0.906-5.469,2.781-10.594,8.25-11.5 c38.125-6.375,108.125-10.219,127.969-10.219s89.844,3.844,127.969,10.219C389.438,307.719,392.719,312.844,391.813,318.313z M256,131.125c42.344,0,76.75,34.406,76.75,76.75c0,19.219-7.188,36.781-18.969,50.281L256,320.813l-57.781-62.656 c-11.781-13.5-18.969-31.063-18.969-50.281C179.25,165.531,213.656,131.125,256,131.125z"/>
-                            </svg>
+                            <svg width="20" height="20" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M1.5 0C1.22386 0 1 0.223858 1 0.5V13.5C1 13.7761 1.22386 14 1.5 14H3V0H1.5Z" fill="currentColor"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M4 15H5V14H11.5C12.8807 14 14 12.8807 14 11.5V2.5C14 1.11929 12.8807 0 11.5 0H4V15ZM11 5H7V4H11V5Z" fill="currentColor"/>
+</svg>
                             Fontes e Evidências
                         </div>
                         <div id="evidence-content"></div>
@@ -914,7 +921,7 @@
                     <div class="input-container">
                         <textarea 
                             id="question-input" 
-                            placeholder="Faça a sua pergunta sobre a documentação da equipa..."
+                            placeholder="Faça a sua pergunta sobre a documentação interna..."
                             rows="1"
                             onkeydown="handleKeyPress(event)"
                         ></textarea>
@@ -1116,6 +1123,8 @@
             let formattedAnswer = data.answer
                 // Remove excessive blank lines
                 .replace(/\n\s*\n\s*\n/g, '\n\n')
+                // Code blocks: ```code```
+                .replace(/```([^`]+)```/g, '<pre><code>$1</code></pre>')
                 // Headers: ###, ##, #
                 .replace(/^### (.+)$/gm, '<h3>$1</h3>')
                 .replace(/^## (.+)$/gm, '<h2>$1</h2>')
@@ -1123,10 +1132,10 @@
                 // Bold: **text** or __text__
                 .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
                 .replace(/__(.+?)__/g, '<strong>$1</strong>')
-                // Italic: *text* or _text_
-                .replace(/\*(.+?)\*/g, '<em>$1</em>')
-                .replace(/_(.+?)_/g, '<em>$1</em>')
-                // Code: `code`
+                // Italic: *text* or _text_ (but not inside words)
+                .replace(/(?<!\w)\*(.+?)\*(?!\w)/g, '<em>$1</em>')
+                .replace(/(?<!\w)_(.+?)_(?!\w)/g, '<em>$1</em>')
+                // Code: `code` (inline)
                 .replace(/`(.+?)`/g, '<code>$1</code>')
                 // Citations: [1], [2], etc
                 .replace(/\[(\d+)\]/g, '<a href="#evidence-$1">[$1]</a>')
@@ -1141,7 +1150,7 @@
                 .replace(/\n/g, '<br>');
 
             // Wrap in paragraph if not already wrapped
-            if (!formattedAnswer.startsWith('<h') && !formattedAnswer.startsWith('<ul') && !formattedAnswer.startsWith('<p')) {
+            if (!formattedAnswer.startsWith('<h') && !formattedAnswer.startsWith('<ul') && !formattedAnswer.startsWith('<p') && !formattedAnswer.startsWith('<pre')) {
                 formattedAnswer = '<p>' + formattedAnswer + '</p>';
             }
             
@@ -1205,6 +1214,7 @@
 
             if (!evidence || evidence.length === 0) {
                 evidenceSidebar.classList.add('empty');
+                evidenceContent.innerHTML = '';
                 return;
             }
 

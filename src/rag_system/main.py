@@ -13,10 +13,14 @@ from rag_system.providers.database import get_database_provider
 from rag_system.providers.embedder import get_embedder_provider
 from rag_system.providers.reranker_model import get_reranker_provider
 from rag_system.providers.llm import get_llm_provider
+from rag_system.providers.vision import get_vision_provider
+from rag_system.workers.query.query_validator import get_query_validator
 
 logger = get_logger(__name__)
 
 load_dotenv()
+
+version = "0.1.0"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -50,6 +54,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         llm_name = f"{llm.provider}:{llm.model}"
         logger.info(f"✓ LLM provider initialized: {llm_name}")
         
+        # Load Vision
+        vision = get_vision_provider()
+        vision_name = f"{vision.provider}:{vision.model}"
+        logger.info(f"✓ Vision provider initialized: {vision_name}")
+        
+        # Load Query Validator
+        validator = get_query_validator()
+        if validator.enabled:
+            validator_name = f"{validator.config.provider}:{validator.model}"
+            logger.info(f"✓ Query validator initialized: {validator_name}")
+        else:
+            logger.info("✓ Query validator: disabled")
+        
         logger.info("RAG System ready to accept requests")
 
     except Exception as e:
@@ -65,7 +82,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title="BPI RAG System API",
     description="Retrieval-Augmented Generation system for team documentation",
-    version="0.1.0",
+    version=version,
     lifespan=lifespan,
 )
 
@@ -91,6 +108,6 @@ async def root() -> dict[str, str]:
     """Root endpoint."""
     return {
         "service": "BPI RAG System",
-        "version": "0.1.0",
+        "version": version,
         "docs": "/docs",
     }

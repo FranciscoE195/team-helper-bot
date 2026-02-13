@@ -44,12 +44,20 @@ class VisionConfig(BaseSettings):
     model: str
 
 
+class ValidatorConfig(BaseSettings):
+    """Query validator configuration."""
+    enabled: bool = True
+    provider: Literal["anthropic"]
+    model: str = "claude-3-5-haiku-20241022"
+
+
 class ModelsConfig(BaseSettings):
     """All models configuration."""
     embedding: EmbeddingModelConfig
     reranker: RerankerModelConfig
     llm: LLMConfig
     vision: VisionConfig
+    validator: ValidatorConfig
 
 
 class HybridSearchConfig(BaseSettings):
@@ -188,9 +196,9 @@ def get_settings() -> Settings:
     # If config file doesn't exist, throw an error with instructions
     if not config_path.exists():
         raise FileNotFoundError(
-            f"Configuration file not found at {config_path}. "
-            f"Please create the file with the necessary settings. "
-            f"Refer to config/config.example.yaml for a template."
+            f"Configuration file not found: {config_path}. "
+            f"Please create the config.yaml file with the necessary settings. "
+            f"Refer to the documentation for required configuration fields."
         )
 
     with Path(config_path).open() as f:

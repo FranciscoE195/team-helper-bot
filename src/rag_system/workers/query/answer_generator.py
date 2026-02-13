@@ -1,5 +1,7 @@
 """Answer generator worker - generates answer using LLM."""
 
+import re
+
 from rag_system.models.domain import GeneratedAnswer
 from rag_system.providers.llm import get_llm_provider
 
@@ -18,44 +20,72 @@ class AnswerGenerator:
         # Call LLM
         answer_text, generation_time_ms = self.llm.generate(system_prompt, user_prompt)
 
+        # Clean up markdown formatting
+        cleaned_text = self._cleanup_markdown(answer_text)
+
         # Estimate token count (rough approximation)
-        token_count = len(answer_text.split())
+        token_count = len(cleaned_text.split())
 
         return GeneratedAnswer(
-            text=answer_text.strip(),
+            text=cleaned_text.strip(),
             generation_time_ms=generation_time_ms,
             token_count=token_count,
         )
 
+    def _cleanup_markdown(self, text: str) -> str:
+        """Clean up markdown formatting for better readability."""
+        # Remove standalone horizontal rules (---, ___, ***)
+        text = re.sub(r'^\s*[-_*]{3,}\s*$', '', text, flags=re.MULTILINE)
+        
+        # Remove excessive blank lines (more than 2 consecutive)
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        
+        # Remove trailing spaces at end of lines
+        text = re.sub(r' +$', '', text, flags=re.MULTILINE)
+        
+        # Fix excessive spacing around headers
+        text = re.sub(r'\n{2,}(#{1,6} )', r'\n\n\1', text)  # Max 2 newlines before headers
+        text = re.sub(r'(#{1,6} .+)\n{2,}', r'\1\n\n', text)  # Max 2 newlines after headers
+        
+        # Remove markdown artifacts that don't render well
+        text = re.sub(r'^\s*>\s*$', '', text, flags=re.MULTILINE)  # Empty blockquotes
+        
+        # Clean up list spacing - ensure single newline between list items
+        text = re.sub(r'(\n[-*+]\s+.+)\n{2,}(?=[-*+]\s+)', r'\1\n', text)
+        
+        # Remove any accidental code fence remnants
+        text = re.sub(r'^```\s*$', '', text, flags=re.MULTILINE)
+        
+        return text
+
     def _build_system_prompt(self) -> str:
         """Build system prompt for LLM."""
-        return """You are a helpful technical documentation assistant for BPI's software development team.
+        return """You are a helpful documentation assistant for a software development team.
 
 Your role:
-- Provide accurate, actionable answers based ONLY on the source documents
-- Cite sources using [1], [2], [3] notation after each claim
-- Be precise, clear, and concise
-- Prioritize practical guidance and specific instructions
-- Use Portuguese when the question is in Portuguese, English when in English
-- If multiple sources say conflicting things, mention both perspectives
+- Answer questions using ONLY the provided source documents
+- Cite sources using [1], [2], [3] notation after each claim (these numbers match the sources in the context)
+- Be precise and accurate
+- If information is not in the sources, say "Não encontrei informação suficiente nas fontes"
+- Keep answers concise but complete
+- Always cite ALL sources that support your answer
 
-Quality standards:
-- NEVER make up information not in the sources
-- ALWAYS cite ALL sources that support your answer
-- If information is missing, say "Não encontrei informação suficiente nas fontes"
-- Prefer recent/updated sources when multiple sources exist
-- Include code examples verbatim if present in sources
+Formatting guidelines:
+- Use markdown for structure (headers, lists, code blocks)
+- Keep formatting clean and minimal
+- Avoid excessive spacing or decorative elements like horizontal rules (---)
+- Use bullet points for lists, not numbered lists unless order matters
+- Keep paragraphs concise and separated by single blank lines
 
-Citation rules:
-- Cite after every factual claim
-- Use [1], [2], [3] matching the source numbers in context
-- Cite multiple sources for the same point: [1][2]
-- One citation number per source document"""
+Important rules:
+- Never make up information
+- Always cite your sources using [1], [2], [3], etc
+- Use the exact citation numbers from the context
+- Cite multiple sources if they all support the same point"""
 
     def _build_user_prompt(self, question: str, context: str) -> str:
         """Build user prompt with context and question."""
         # Count how many sources are in the context
-        import re
         source_numbers = re.findall(r'^\[(\d+)\]', context, re.MULTILINE)
         max_source = max([int(n) for n in source_numbers]) if source_numbers else 0
         
