@@ -20,34 +20,28 @@ class DatabaseConfig(BaseSettings):
 
 class EmbeddingModelConfig(BaseSettings):
     """Embedding model configuration."""
-    model_name: str
-    device: str = "cpu"
-    batch_size: int = 32
-    cache_dir: str | None = None
+    provider: Literal["voyage", "openai"]
+    model: str
 
 
 class RerankerModelConfig(BaseSettings):
     """Reranker model configuration."""
-    model_name: str
-    device: str = "cpu"
-    batch_size: int = 16
-    cache_dir: str | None = None
+    provider: Literal["cohere"]
+    model: str
 
 
 class LLMConfig(BaseSettings):
     """LLM configuration."""
-    provider: Literal["ollama", "openai", "azure"]
+    provider: Literal["anthropic", "groq"]
     model: str
-    base_url: str | None = None
     temperature: float = 0.1
-    max_tokens: int = 1000
+    max_tokens: int = 2048
 
 
 class VisionConfig(BaseSettings):
     """Vision model configuration."""
-    provider: Literal["ollama", "openai", "azure"]
+    provider: Literal["anthropic"]
     model: str
-    base_url: str | None = None
 
 
 class ModelsConfig(BaseSettings):
@@ -72,8 +66,8 @@ class RerankConfig(BaseSettings):
 
 class EvidenceConfig(BaseSettings):
     """Evidence filtering configuration."""
-    min_score: float = 0.75
-    insufficient_threshold: int = 2
+    min_score: float = 0.5
+    insufficient_threshold: int = 1
     medium_threshold: int = 2
     high_threshold: int = 3
     max_sources: int = 5
@@ -110,12 +104,12 @@ class IngestionConfig(BaseSettings):
     git: GitConfig
     markdown: MarkdownConfig
     chunking: ChunkingConfig
-    docs_base_url: str | None = None  # Base URL for deployed documentation
+    docs_base_url: str | None = None
 
 
 class APIConfig(BaseSettings):
     """API configuration."""
-    model_config = SettingsConfigDict(extra='allow')  # Allow extra fields
+    model_config = SettingsConfigDict(extra='allow')
 
     cors_origins: list[str] = Field(default_factory=list)
     rate_limit_enabled: bool = False
@@ -162,12 +156,11 @@ def setup_logging(config: LoggingConfig) -> logging.Logger:
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
-    # File handler if specified and writable
+    # File handler if specified
     if config.file:
         from pathlib import Path
         log_file = Path(config.file)
         
-        # Only create directory if it's writable (skip /var/log on Render)
         try:
             log_file.parent.mkdir(parents=True, exist_ok=True)
             file_handler = logging.FileHandler(config.file)
@@ -175,7 +168,6 @@ def setup_logging(config: LoggingConfig) -> logging.Logger:
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
         except PermissionError:
-            # On Render, can't write to /var/log - just use console logging
             logger.warning(f"Cannot write to {config.file}, using console only")
 
     return logger
@@ -192,8 +184,14 @@ def get_settings() -> Settings:
     """Get cached settings instance."""
     # Load from YAML
     config_path = Path("config/config.yaml")
+    
+    # If config file doesn't exist, throw an error with instructions
     if not config_path.exists():
-        config_path = Path("config/config.example.yaml")
+        raise FileNotFoundError(
+            f"Configuration file not found at {config_path}. "
+            f"Please create the file with the necessary settings. "
+            f"Refer to config/config.example.yaml for a template."
+        )
 
     with Path(config_path).open() as f:
         config_dict = yaml.safe_load(f)

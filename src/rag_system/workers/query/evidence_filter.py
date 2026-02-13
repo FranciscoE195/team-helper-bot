@@ -49,11 +49,18 @@ class EvidenceFilter:
         )
 
     def _determine_confidence(self, num_sources: int) -> Literal["insufficient", "medium", "high", "very_high"]:
-        """Determine confidence level based on number of sources."""
-        if num_sources < self.config.insufficient_threshold:
+        """Determine confidence level based on number of sources.
+        
+        Logic:
+        - insufficient: < insufficient_threshold (e.g., 0 sources if threshold=1)
+        - medium: >= insufficient_threshold AND < medium_threshold
+        - high: >= medium_threshold AND < high_threshold  
+        - very_high: >= high_threshold
+        """
+        if num_sources <= self.config.insufficient_threshold:
             return "insufficient"
-        if num_sources < self.config.medium_threshold or num_sources < self.config.high_threshold:
+        if num_sources < self.config.medium_threshold:
             return "medium"
-        if num_sources < self.config.max_sources:
+        if num_sources < self.config.high_threshold:
             return "high"
         return "very_high"

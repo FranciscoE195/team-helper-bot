@@ -108,6 +108,16 @@
             opacity: 0.9;
         }
 
+        .api-status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-top: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
         .main-content {
             background: white;
             border-radius: 12px;
@@ -427,6 +437,7 @@
             <div class="header">
                 <h1>🤖 BPI Team Helper</h1>
                 <p>Sistema RAG para Documentação da Equipa</p>
+                <div class="api-status">🌐 Production API: Render.com</div>
             </div>
 
             <div class="main-content">
@@ -453,7 +464,8 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:8000/api/query';
+        // Production API URL
+        const API_URL = 'https://bpi-rag-api.onrender.com/api/query';
         const HISTORY_KEY = 'bpi_rag_history';
 
         // Load history on page load
@@ -678,7 +690,7 @@
                 <div class="error-message">
                     <h3>❌ Erro ao processar a pergunta</h3>
                     <p>${error.message}</p>
-                    <p style="margin-top: 10px; font-size: 0.9em;">Verifique se o servidor API está a correr em http://localhost:8000</p>
+                    <p style="margin-top: 10px; font-size: 0.9em;">Verifique se o servidor API está disponível em https://bpi-rag-api.onrender.com</p>
                 </div>
             `;
             responseDiv.classList.add('visible');

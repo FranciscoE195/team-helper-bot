@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from rag_system.config import get_logger
 from rag_system.models.api import IngestionResponse
 from rag_system.workers.ingestion.database_writer import DatabaseWriter
-from rag_system.workers.ingestion.embedder import EmbedderWorker
+from rag_system.providers.embedder import get_embedder_provider
 from rag_system.workers.ingestion.git_fetcher import GitFetcher
 from rag_system.workers.ingestion.image_processor import ImageProcessor
 from rag_system.workers.ingestion.markdown_parser import MarkdownParser
@@ -26,7 +26,7 @@ class IngestionService:
         self.git_fetcher = GitFetcher()
         self.parser = MarkdownParser()
         self.image_processor = ImageProcessor(db)
-        self.embedder = EmbedderWorker()
+        self.embedder = get_embedder_provider()
         self.writer = DatabaseWriter(db)
 
     @Timer(name="ingestion_pipeline", text="Ingestion pipeline completed in {:.2f}s", logger=logger.info)
@@ -81,7 +81,19 @@ class IngestionService:
             # Generate embeddings
             logger.debug("Generating embeddings")
             with Timer(name="embedding_generation", text="Embedding generation: {:.3f}s", logger=logger.debug):
-                document_data = self.embedder.embed_document(document_data)
+                # Adaptação: embed_document não existe mais, então implementa aqui
+                # Prepara textos para embedding
+                texts = []
+                for section in document_data.sections:
+                    text = section.title or ""
+                    if text:
+                        text += "\n\n"
+                    text += section.content
+                    texts.append(text)
+
+                embeddings = self.embedder.embed_batch(texts)
+                for section, embedding in zip(document_data.sections, embeddings):
+                    section.embedding = embedding
 
             # Write to database
             logger.debug("Writing to database")

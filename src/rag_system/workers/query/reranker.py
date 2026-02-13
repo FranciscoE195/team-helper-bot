@@ -1,37 +1,71 @@
-"""Reranker worker - uses cross-encoder for accurate relevance scoring."""
+"""Reranker model provider - Cohere only."""
 
-from rag_system.config import get_settings
-from rag_system.models.domain import RankedSection, SearchResult
-from rag_system.providers.reranker_model import get_reranker_provider
+import os
+from functools import lru_cache
+
+from codetiming import Timer
+
+from rag_system.config import get_logger, get_settings
+from rag_system.exceptions import ModelError
+
+logger = get_logger(__name__)
 
 
-class Reranker:
-    """Reranker using cross-encoder model."""
+class RerankerProvider:
+    """Reranker model provider - Cohere only."""
 
-    def __init__(self):
-        self.settings = get_settings()
-        self.reranker = get_reranker_provider()
-        self.top_k = self.settings.search.rerank.top_k
+    def __init__(self) -> None:
+        settings = get_settings()
+        self.config = settings.models.reranker
+        self.provider = self.config.provider
+        self.model = self.config.model
 
-    def rerank(self, query: str, search_results: list[SearchResult]) -> list[RankedSection]:
-        """Rerank search results using cross-encoder."""
-        if not search_results:
-            return []
+        logger.info(f"Initializing reranker provider: {self.provider}")
 
-        # Extract sections and contents
-        sections = [result.section for result in search_results]
-        contents = [section.content for section in sections]
+        if self.provider != "cohere":
+            raise ModelError(f"Unsupported reranker provider: {self.provider}. Only 'cohere' is supported.")
 
-        # Score all sections with reranker
-        scores = self.reranker.score_batch(query, contents)
+        api_key = os.getenv("COHERE_API_KEY")
+        if not api_key:
+            raise ModelError("COHERE_API_KEY environment variable not set")
+        
+        try:
+            import cohere
+            self.cohere_client = cohere.Client(api_key=api_key)
+        except ImportError:
+            raise ModelError("cohere package not installed. Run: pip install cohere")
 
-        # Create ranked sections
-        ranked = [
-            RankedSection(section=section, rerank_score=float(score))
-            for section, score in zip(sections, scores)
-        ]
+        logger.info(f"Cohere reranker configured: {self.model}")
 
-        # Sort by rerank score and take top k
-        ranked.sort(key=lambda x: x.rerank_score, reverse=True)
+    def score(self, query: str, text: str) -> float:
+        """Score single query-text pair."""
+        return self.score_batch(query, [text])[0]
 
-        return ranked[: self.top_k]
+    @Timer(name="rerank_batch", text="Reranked {count} pairs in {:.3f}s", logger=None)
+    def score_batch(self, query: str, texts: list[str]) -> list[float]:
+        """Score batch of query-text pairs."""
+        logger.debug(f"Reranking batch of {len(texts)} texts with Cohere")
+        
+        try:
+            results = self.cohere_client.rerank(
+                model=self.model,
+                query=query,
+                documents=texts,
+                top_n=len(texts),
+                return_documents=False
+            )
+            
+            # Create score map maintaining original order
+            score_map = {result.index: result.relevance_score for result in results.results}
+            scores = [score_map.get(i, 0.0) for i in range(len(texts))]
+            return scores
+            
+        except Exception as e:
+            logger.error(f"Cohere reranking failed: {e}", exc_info=True)
+            raise ModelError(f"Cohere reranking failed: {e}") from e
+
+
+@lru_cache
+def get_reranker_provider() -> RerankerProvider:
+    """Get cached reranker provider."""
+    return RerankerProvider()

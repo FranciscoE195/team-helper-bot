@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
-
+import os
+from dotenv import load_dotenv
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -9,9 +10,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from rag_system.api.routes import health, query, trace, webhook
 from rag_system.config import get_logger, get_settings, setup_logging
 from rag_system.providers.database import get_database_provider
+from rag_system.providers.embedder import get_embedder_provider
+from rag_system.providers.reranker_model import get_reranker_provider
+from rag_system.providers.llm import get_llm_provider
 
 logger = get_logger(__name__)
 
+load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -27,8 +32,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         db_provider = get_database_provider()
         logger.info("Database connected successfully")
 
-        # Note: ML models are loaded lazily on first request to avoid startup timeout
-        logger.info("RAG System ready to accept requests (models will load on first use)")
+        # Preload ML models at startup
+        logger.info("Loading ML models...")
+        
+        # Load embedding model
+        embedder = get_embedder_provider()
+        model_name = f"{embedder.provider}:{embedder.model}"
+        logger.info(f"✓ Embedding model loaded: {model_name}")
+        
+        # Load reranker model
+        reranker = get_reranker_provider()
+        reranker_name = f"{reranker.provider}:{reranker.model}"
+        logger.info(f"✓ Reranker model loaded: {reranker_name}")
+        
+        # Load LLM
+        llm = get_llm_provider()
+        llm_name = f"{llm.provider}:{llm.model}"
+        logger.info(f"✓ LLM provider initialized: {llm_name}")
+        
+        logger.info("RAG System ready to accept requests")
 
     except Exception as e:
         logger.error(f"Failed to start RAG System: {e}", exc_info=True)

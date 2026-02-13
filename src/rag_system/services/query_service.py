@@ -8,11 +8,12 @@ from sqlalchemy.orm import Session
 from rag_system.config import get_logger, get_settings
 from rag_system.exceptions import InsufficientEvidenceError
 from rag_system.models.api import EvidenceItem, QueryResponse
+from rag_system.models.domain import RankedSection
 from rag_system.workers.query.answer_generator import AnswerGenerator
 from rag_system.workers.query.context_builder import ContextBuilder
 from rag_system.workers.query.evidence_filter import EvidenceFilter
 from rag_system.workers.query.hybrid_searcher import HybridSearcher
-from rag_system.workers.query.reranker import Reranker
+from rag_system.workers.query.reranker import get_reranker_provider
 from rag_system.workers.query.trace_logger import TraceLogger
 
 logger = get_logger(__name__)
@@ -27,7 +28,7 @@ class QueryService:
 
         # Initialize workers
         self.searcher = HybridSearcher(db)
-        self.reranker = Reranker()
+        self.reranker = get_reranker_provider()
         self.filter = EvidenceFilter()
         self.context_builder = ContextBuilder(db)
         self.generator = AnswerGenerator()
@@ -56,7 +57,14 @@ class QueryService:
         # Step 2: Rerank
         logger.debug("Step 2: Reranking")
         with Timer(name="rerank", text="Reranking: {:.3f}s", logger=logger.debug):
-            ranked_sections = self.reranker.rerank(question, search_results)
+            # Prepara textos para reranking
+            texts = [s.section.content for s in search_results]
+            scores = self.reranker.score_batch(question, texts)
+            # Cria RankedSection para EvidenceFilter
+            ranked_sections = [
+                RankedSection(section=s.section, rerank_score=score)
+                for s, score in zip(search_results, scores)
+            ]
         logger.info(f"Reranked to {len(ranked_sections)} top sections")
 
         # Step 3: Filter evidence
@@ -75,7 +83,7 @@ class QueryService:
         if filtered_evidence.confidence == "insufficient":
             logger.warning("Insufficient evidence to answer question")
             raise InsufficientEvidenceError(
-                "I don't have enough reliable sources to answer this question confidently."
+                "Não encontrei evidências suficientes para responder à sua pergunta. Por favor, tente reformular ou fornecer mais detalhes."
             )
 
         # Step 4: Build context
@@ -95,6 +103,8 @@ class QueryService:
                 "token_count": generated_answer.token_count,
             },
         )
+        # print everything in generated_answer for debugging
+        logger.info(f"Generated answer details: {generated_answer.text}")
 
         # Step 6: Log trace
         logger.debug("Step 6: Logging trace")
@@ -128,8 +138,8 @@ class QueryService:
             timestamp=start_time,
             generation_time_ms=generated_answer.generation_time_ms,
             models_used={
-                "embedding": self.settings.models.embedding.model_name,
-                "reranker": self.settings.models.reranker.model_name,
+                "embedding": self.settings.models.embedding.model,
+                "reranker": self.settings.models.reranker.model,
                 "llm": self.settings.models.llm.model,
             },
         )

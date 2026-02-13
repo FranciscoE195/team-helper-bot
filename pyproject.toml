@@ -29,6 +29,11 @@ dependencies = [
     "click>=8.1.7",
     "rich>=13.7.0",
     "codetiming>=1.4.0",
+    # Cloud API providers
+    "anthropic>=0.40.0",
+    "voyageai>=0.2.0",
+    "cohere>=5.11.0",
+    "tenacity>=9.1.4",
 ]
 
 [dependency-groups]

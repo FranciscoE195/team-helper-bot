@@ -34,15 +34,20 @@ class TraceLogger:
 
         logger.debug(f"Logging trace: {trace_id}")
 
+        # Get actual model names being used
+        embedding_model = f"{self.settings.models.embedding.provider}:{self.settings.models.embedding.model}"
+        reranker_model = f"{self.settings.models.reranker.provider}:{self.settings.models.reranker.model}"
+        llm_model = f"{self.settings.models.llm.provider}:{self.settings.models.llm.model}"
+
         # Create trace record
         trace = QueryTraceModel(
             trace_id=trace_id,
             query_text=query,
             user_id=user_id,
             confidence=evidence.confidence,
-            embedding_model=self.settings.models.embedding.model_name,
-            reranker_model=self.settings.models.reranker.model_name,
-            llm_model=self.settings.models.llm.model,
+            embedding_model=embedding_model,
+            reranker_model=reranker_model,
+            llm_model=llm_model,
         )
         self.db.add(trace)
 

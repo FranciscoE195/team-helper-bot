@@ -34,6 +34,7 @@ ENV/
 
 # Configuration (keep examples)
 .env
+.env.example
 config/config.yaml
 !config/config.example.yaml
 
